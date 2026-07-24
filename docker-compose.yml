@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  nginx-pqc:
+    image: openquantumsafe/nginx:latest
+    ports:
+      - "4443:4433"
+    volumes:
+      - ./nginx/nginx.conf:/opt/nginx/nginx-conf/nginx.conf:ro
+      - ./certs:/opt/nginx/certs:ro
+    environment:
+      - NGINX_PORT=4433

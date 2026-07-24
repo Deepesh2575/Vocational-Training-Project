@@ -1,0 +1,42 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "C:\\Users\\DEEPESH\\Downloads\\VT  project 2\\contracts\\contracts\\JobOrchestrator.sol": {
+      "lastModificationDate": 1784789928153,
+      "contentHash": "19b33e175672211d71fe7bacc2ba0d0a",
+      "sourceName": "contracts/JobOrchestrator.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "IJobOrchestrator",
+        "JobOrchestrator"
+      ]
+    }
+  }
+}
