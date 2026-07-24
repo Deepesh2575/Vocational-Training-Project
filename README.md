@@ -163,6 +163,3 @@ Jobs are matched to workers using a weighted function:
 
 - **Phase 2 (Confidential Compute Expansion):** Integration of enclave-backed execution for privacy-sensitive analytics and multi-worker failover.
 - **Phase 3 (Advanced Governance & FHE):** Fully Homomorphic Encryption (CKKS/BFV) support for privacy-preserving analytics, and advanced stake delegation mechanics/cross-chain settlement.
-
-## License
-MIT
