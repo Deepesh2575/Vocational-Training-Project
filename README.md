@@ -163,3 +163,68 @@ Jobs are matched to workers using a weighted function:
 
 - **Phase 2 (Confidential Compute Expansion):** Integration of enclave-backed execution for privacy-sensitive analytics and multi-worker failover.
 - **Phase 3 (Advanced Governance & FHE):** Fully Homomorphic Encryption (CKKS/BFV) support for privacy-preserving analytics, and advanced stake delegation mechanics/cross-chain settlement.
+
+---
+
+## 💻 End-to-End Local Execution Guide (Current State)
+
+You can run the entire lifecycle locally. This will simulate a Client submitting an encrypted Python job to the Smart Contract, uploading it to IPFS, and a Worker node picking it up, decrypting it, executing it in a sandbox, and submitting a ZK-proof hash to reclaim its stake.
+
+### ⚡ Automated Execution (Recommended for Windows)
+
+To avoid managing multiple terminal windows and Python environments manually, you can simply run the provided batch script:
+
+1. Double-click the `start_demo.bat` file in the root directory (or run `.\start_demo.bat` from PowerShell).
+2. The script will automatically open 5 separate terminal windows.
+3. It activates the `.venv` virtual environment in each window.
+4. It starts the Blockchain, Mock IPFS Server, Worker Node, and Client SDK in the correct order.
+5. Watch the "Worker Node" and "Client SDK" terminals to see the process execute.
+
+### 🛠️ Manual Execution (For Linux/Mac or Troubleshooting)
+
+If you prefer to run it manually, follow these steps across multiple terminal windows:
+### Terminal 1: Start Local Blockchain
+```bash
+cd contracts
+npx hardhat node
+```
+
+### Terminal 2: Deploy Smart Contract
+Leave Terminal 1 running and open a new terminal:
+```bash
+cd contracts
+npx hardhat run scripts/deploy.ts --network localhost
+```
+*Make sure the deployed address matches the one hardcoded in `apps/client-sdk/client.py` and `apps/worker-runtime/worker.py` (currently `0x5FbDB2315678afecb367f032d93F642f64180aa3`).*
+
+### Terminal 3: Start Mock IPFS Server
+Open a new terminal. Make sure your Python virtual environment is activated:
+```bash
+# Activate virtual environment first
+# Windows: .venv\Scripts\activate
+# Linux/Mac: source .venv/bin/activate
+
+python apps/mock_ipfs.py
+```
+
+### Terminal 4: Start the Worker Node
+Open a new terminal. Activate the virtual environment:
+```bash
+cd apps/worker-runtime
+python worker.py
+```
+*The worker will initialize, connect to the blockchain, and listen for `JobRegistered` events.*
+
+### Terminal 5: Submit a Job as the Client
+Open a new terminal. Activate the virtual environment:
+```bash
+cd apps/client-sdk
+python client.py
+```
+
+### What you will see:
+1. The **Client** will generate a PQC session key, write it to `shared_key.bin` (our temporary bridge), encrypt a Python script, upload it to the mock IPFS, and register the job on the blockchain.
+2. The **Worker** will see the job, submit a bid with a 1 ETH stake, and win the job.
+3. The **Worker** will download the encrypted payload, verify its ML-DSA signature, decrypt it, and execute it securely in a subprocess sandbox.
+4. The **Worker** will hash the stdout (`Computed confidential sum: 666616.4591971084`) and submit that hash to the smart contract as an execution proof.
+5. The **Worker** automatically reclaims its 1 ETH stake upon success!

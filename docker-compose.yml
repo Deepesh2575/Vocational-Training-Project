@@ -10,3 +10,12 @@ services:
       - ./certs:/opt/nginx/certs:ro
     environment:
       - NGINX_PORT=4433
+
+  ipfs:
+    image: ipfs/kubo:latest
+    ports:
+      - "4001:4001"    # p2p
+      - "5001:5001"    # API
+      - "8080:8080"    # Gateway
+    volumes:
+      - ./ipfs_data:/data/ipfs

@@ -79,7 +79,7 @@ if __name__ == "__main__":
         
     # Ask the user for the deployed contract address
     print("Please ensure you have started a local node (`npx hardhat node`) and deployed the contract (`npx hardhat run scripts/deploy.ts --network localhost`).")
-    contract_address = input("Enter the deployed JobOrchestrator contract address: ").strip()
+    contract_address = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
     
     if not contract_address:
         print("Invalid address. Exiting.")
@@ -118,19 +118,65 @@ if __name__ == "__main__":
         
         print(f"Post-Quantum Session Key Derived: {session_key.hex()[:16]}... (64 bytes)")
 
+        # Temporary bridge: Save the derived session key for the worker
+        # This will be removed once the gRPC Transport Layer is built
+        shared_key_path = os.path.join(project_root, "shared_key.bin")
+        with open(shared_key_path, "wb") as f:
+            f.write(session_key)
+        print("Saved session_key to shared_key.bin (Temporary bridge)")
+
         # Test Payload Encryption
         print("\nTesting Payload Encryption (AES-256-GCM)...")
-        test_data = b"Hello Confidential Compute Enclave!"
+        # Real executable payload
+        payload_script = """
+import math
+def compute():
+    # Simulate a heavy confidential ML inference or data analysis
+    result = sum([math.sqrt(i) for i in range(10000)])
+    print(f"Computed confidential sum: {result}")
+compute()
+"""
+        test_data = payload_script.encode('utf-8')
         # AES-256 requires exactly a 32-byte key. We take the first 32 bytes of the 64-byte derived session key.
         aes_key = session_key[:32]
         nonce, ciphertext = client.encrypt_payload(test_data, aes_key)
         print(f"Encrypted! Nonce: {nonce.hex()}, Ciphertext: {ciphertext.hex()}")
         
+        print("\nGenerating ML-DSA Keys and Signing Payload...")
+        mldsa_vk, mldsa_sk = crypto_pqc.generate_mldsa_keys()
+        
+        # We sign the nonce + ciphertext as the payload to prove provenance
+        payload_to_sign = nonce + ciphertext
+        signature = crypto_pqc.sign_message(mldsa_sk, payload_to_sign)
+        print(f"ML-DSA Signature Generated! Length: {len(signature)} bytes")
+        
+        # Save to IPFS via StorageClient
+        from storage import StorageClient
+        storage_client = StorageClient()
+        
+        manifest = {
+            "nonce": nonce.hex(),
+            "ciphertext": ciphertext.hex(),
+            "mldsa_public_key": mldsa_vk.hex(),
+            "mldsa_signature": signature.hex()
+        }
+        
+        print("\nUploading payload manifest to IPFS...")
+        try:
+            cid = storage_client.upload_dict(manifest)
+            ipfs_uri = f"ipfs://{cid}"
+            print(f"[IPFS] Upload Successful! CID: {cid}")
+        except Exception as e:
+            print(f"[IPFS] Upload failed: {e}")
+            print("Please ensure your local IPFS node is running (e.g., via Docker).")
+            import sys
+            sys.exit(1)
+            
         # Test Job Registration
-        print("\nRegistering a job on the local blockchain...")
+        print(f"\nRegistering a job on the local blockchain with CID: {ipfs_uri}")
         job_id = client.register_job(
             budget=1500,
-            cid="ipfs://QmTest123",
+            cid=ipfs_uri,
             min_cpu=8,
             min_gpu=16,
             min_ram=32
@@ -164,6 +210,7 @@ if __name__ == "__main__":
             
             print("Waiting for worker to execute enclave workload and submit proof...")
             # Poll for completion
+            start_time = time.time()
             while True:
                 state = client.contract.functions.getJobState(job_id).call()
                 if state == 4: # ProofSubmitted
@@ -171,6 +218,26 @@ if __name__ == "__main__":
                     print(f"\n[SUCCESS] Worker has submitted ZK Execution Proof!")
                     print(f"Result Hash: {job_info[8].hex()}")
                     break
+                    
+                # If 5 minutes pass without proof, slash the worker
+                if time.time() - start_time > 300: 
+                    print("\n[WARNING] Worker timed out! Initiating Slashing procedure...")
+                    try:
+                        nonce = client.w3.eth.get_transaction_count(client.account.address)
+                        tx = client.contract.functions.slashWorker(job_id).build_transaction({
+                            'from': client.account.address,
+                            'nonce': nonce,
+                            'gas': 1000000,
+                            'gasPrice': client.w3.to_wei('50', 'gwei')
+                        })
+                        signed_tx = client.w3.eth.account.sign_transaction(tx, private_key=client.private_key)
+                        tx_hash = client.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+                        client.w3.eth.wait_for_transaction_receipt(tx_hash)
+                        print(f"[SUCCESS] Worker slashed. Locked stake has been transferred back to you.")
+                    except Exception as e:
+                        print(f"[ERROR] Could not slash worker: {e}")
+                    break
+                    
                 time.sleep(3)
             
         else:

@@ -3,6 +3,8 @@ import time
 import os
 import hashlib
 import sys
+import subprocess
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from web3 import Web3
 
 # Ensure we can import crypto_pqc (assumes the module is installed in the current venv)
@@ -38,7 +40,8 @@ class ConfidentialWorkerNode:
             'from': self.account.address,
             'nonce': nonce,
             'gas': 1000000,
-            'gasPrice': self.w3.to_wei('50', 'gwei')
+            'gasPrice': self.w3.to_wei('50', 'gwei'),
+            'value': self.stake
         })
         signed_tx = self.w3.eth.account.sign_transaction(tx, private_key=self.private_key)
         tx_hash = self.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
@@ -71,21 +74,96 @@ class ConfidentialWorkerNode:
         self.w3.eth.wait_for_transaction_receipt(tx_hash)
         print(f"Submitted ZK Proof for Job ID {job_id}.")
 
-    def simulate_execution(self, job_id: int):
+    def reclaim_stake(self, job_id: int):
+        print(f"Reclaiming stake for Job ID {job_id}...")
+        nonce = self.w3.eth.get_transaction_count(self.account.address)
+        tx = self.contract.functions.releaseStake(job_id).build_transaction({
+            'from': self.account.address,
+            'nonce': nonce,
+            'gas': 1000000,
+            'gasPrice': self.w3.to_wei('50', 'gwei')
+        })
+        signed_tx = self.w3.eth.account.sign_transaction(tx, private_key=self.private_key)
+        tx_hash = self.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+        self.w3.eth.wait_for_transaction_receipt(tx_hash)
+        print(f"Successfully reclaimed {self.w3.from_wei(self.stake, 'ether')} ETH stake!")
+
+    def simulate_execution(self, job_id: int, cid: str):
         print(f"\n--- [TEE Enclave] Executing Job ID {job_id} ---")
         time.sleep(2) # Simulate compute delay
         
-        # In a real environment, the worker would:
-        # 1. Decapsulate the session key using worker_encapsulate.
-        # 2. Decrypt the payload (AES-GCM).
-        # 3. Execute the payload logic inside the TEE.
-        # 4. Generate a ZK proof of deterministic execution.
+        # Verify Payload Provenance via ML-DSA
+        print(f"Fetching payload from IPFS CID: {cid}")
+        try:
+            from storage import StorageClient
+            storage_client = StorageClient()
+            manifest = storage_client.download_dict(cid)
+                
+            nonce_bytes = bytes.fromhex(manifest["nonce"])
+            ct_bytes = bytes.fromhex(manifest["ciphertext"])
+            mldsa_vk = bytes.fromhex(manifest["mldsa_public_key"])
+            signature = bytes.fromhex(manifest["mldsa_signature"])
+            
+            payload = nonce_bytes + ct_bytes
+            is_valid = crypto_pqc.verify_signature(mldsa_vk, payload, signature)
+            if is_valid:
+                print(f"[Worker] ML-DSA Signature Verified Successfully! (Length: {len(signature)} bytes)")
+            else:
+                print("[Worker] WARNING: ML-DSA Signature Verification Failed!")
+        except Exception as e:
+            print(f"[Worker] Could not verify ML-DSA signature or fetch from IPFS: {e}")
+            print(f"[Worker] Could not verify ML-DSA signature: {e}")
         
         print("Compute workload finished successfully.")
         
-        # Produce a simulated ZK Proof / Result Hash
-        result_str = f"Result of Job {job_id}: Success!"
-        proof_hash = hashlib.sha256(result_str.encode()).digest()
+        # 1. Read the temporary session key
+        try:
+            shared_key_path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")), "shared_key.bin")
+            with open(shared_key_path, "rb") as f:
+                session_key = f.read()
+        except FileNotFoundError:
+            print("[Worker] FATAL: shared_key.bin not found. Cannot decrypt payload.")
+            return b""
+            
+        aes_key = session_key[:32]
+        
+        # 2. Decrypt the Payload
+        print("[Worker] Decrypting payload inside Enclave...")
+        aesgcm = AESGCM(aes_key)
+        try:
+            decrypted_data = aesgcm.decrypt(nonce_bytes, ct_bytes, None)
+            payload_script = decrypted_data.decode('utf-8')
+        except Exception as e:
+            print(f"[Worker] Decryption failed: {e}")
+            return b""
+            
+        # 3. Write to temporary execution script
+        enclave_script_path = "enclave_payload.py"
+        with open(enclave_script_path, "w") as f:
+            f.write(payload_script)
+            
+        # 4. Execute the payload in a sandboxed subprocess
+        print(f"[Worker] Executing {enclave_script_path}...")
+        try:
+            # We use subprocess to simulate isolation
+            result = subprocess.run(
+                [sys.executable, enclave_script_path], 
+                capture_output=True, 
+                text=True,
+                check=True
+            )
+            execution_output = result.stdout.strip()
+            print(f"\n--- ENCLAVE EXECUTION OUTPUT ---\n{execution_output}\n--------------------------------\n")
+        except subprocess.CalledProcessError as e:
+            print(f"[Worker] Payload execution failed with error: {e.stderr}")
+            execution_output = e.stderr.strip()
+            
+        # Clean up the script
+        if os.path.exists(enclave_script_path):
+            os.remove(enclave_script_path)
+        
+        # 5. Produce ZK Proof / Result Hash from actual output
+        proof_hash = hashlib.sha256(execution_output.encode('utf-8')).digest()
         print(f"Generated Result Hash: {proof_hash.hex()}")
         return proof_hash
 
@@ -131,9 +209,14 @@ class ConfidentialWorkerNode:
                         
                         if assigned_worker == self.account.address:
                             print(f"\n[Worker] Assigned to Job {job_id}!")
+                            cid = job_info[2]
                             self.mark_executing(job_id)
-                            proof_hash = self.simulate_execution(job_id)
+                            proof_hash = self.simulate_execution(job_id, cid)
                             self.submit_proof(job_id, proof_hash)
+                            
+                            # Release the locked stake back to our wallet
+                            self.reclaim_stake(job_id)
+                            
                             processed_jobs.remove(job_id) # Done
                         else:
                             print(f"\n[Worker] Job {job_id} assigned to a different worker.")
@@ -158,7 +241,7 @@ if __name__ == "__main__":
         "contracts", "artifacts", "contracts", "JobOrchestrator.sol", "JobOrchestrator.json"
     )
     
-    contract_address = input("Enter the deployed JobOrchestrator contract address: ").strip()
+    contract_address = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
     
     if not contract_address:
         print("Invalid address. Exiting.")

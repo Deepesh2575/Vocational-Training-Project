@@ -31,6 +31,7 @@ export type JobStruct = {
   state: BigNumberish;
   assignedWorker: AddressLike;
   resultHash: BytesLike;
+  assignedTimestamp: BigNumberish;
 };
 
 export type JobStructOutput = [
@@ -42,7 +43,8 @@ export type JobStructOutput = [
   minRam: bigint,
   state: bigint,
   assignedWorker: string,
-  resultHash: string
+  resultHash: string,
+  assignedTimestamp: bigint
 ] & {
   client: string;
   budget: bigint;
@@ -53,6 +55,7 @@ export type JobStructOutput = [
   state: bigint;
   assignedWorker: string;
   resultHash: string;
+  assignedTimestamp: bigint;
 };
 
 export interface IJobOrchestratorInterface extends Interface {
@@ -63,6 +66,8 @@ export interface IJobOrchestratorInterface extends Interface {
       | "getJobState"
       | "markExecuting"
       | "registerJob"
+      | "releaseStake"
+      | "slashWorker"
       | "submitBid"
       | "submitProof"
   ): FunctionFragment;
@@ -86,6 +91,14 @@ export interface IJobOrchestratorInterface extends Interface {
   encodeFunctionData(
     functionFragment: "registerJob",
     values: [BigNumberish, string, BigNumberish, BigNumberish, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "releaseStake",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "slashWorker",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "submitBid",
@@ -117,6 +130,14 @@ export interface IJobOrchestratorInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "registerJob",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "releaseStake",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "slashWorker",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "submitBid", data: BytesLike): Result;
@@ -197,6 +218,14 @@ export interface IJobOrchestrator extends BaseContract {
     "nonpayable"
   >;
 
+  releaseStake: TypedContractMethod<
+    [jobId: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
+  slashWorker: TypedContractMethod<[jobId: BigNumberish], [void], "nonpayable">;
+
   submitBid: TypedContractMethod<
     [
       jobId: BigNumberish,
@@ -206,7 +235,7 @@ export interface IJobOrchestrator extends BaseContract {
       ram: BigNumberish
     ],
     [boolean],
-    "nonpayable"
+    "payable"
   >;
 
   submitProof: TypedContractMethod<
@@ -245,6 +274,12 @@ export interface IJobOrchestrator extends BaseContract {
     "nonpayable"
   >;
   getFunction(
+    nameOrSignature: "releaseStake"
+  ): TypedContractMethod<[jobId: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "slashWorker"
+  ): TypedContractMethod<[jobId: BigNumberish], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "submitBid"
   ): TypedContractMethod<
     [
@@ -255,7 +290,7 @@ export interface IJobOrchestrator extends BaseContract {
       ram: BigNumberish
     ],
     [boolean],
-    "nonpayable"
+    "payable"
   >;
   getFunction(
     nameOrSignature: "submitProof"

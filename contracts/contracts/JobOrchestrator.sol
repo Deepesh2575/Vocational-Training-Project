@@ -22,6 +22,7 @@ struct Job {
     JobState state;
     address assignedWorker;
     bytes32 resultHash;
+    uint256 assignedTimestamp;
 }
 
 interface IJobOrchestrator {
@@ -39,13 +40,17 @@ interface IJobOrchestrator {
         uint256 cpu,
         uint256 gpuVram,
         uint256 ram
-    ) external returns (bool);
+    ) external payable returns (bool);
 
     function assignWinner(uint256 jobId) external returns (address);
 
     function markExecuting(uint256 jobId) external;
 
     function submitProof(uint256 jobId, bytes32 proofHash) external;
+    
+    function slashWorker(uint256 jobId) external;
+    
+    function releaseStake(uint256 jobId) external;
 
     function getJobState(uint256 jobId) external view returns (JobState);
 
@@ -84,7 +89,8 @@ contract JobOrchestrator is IJobOrchestrator {
             minRam: minRam,
             state: JobState.BiddingOpen,
             assignedWorker: address(0),
-            resultHash: bytes32(0)
+            resultHash: bytes32(0),
+            assignedTimestamp: 0
         });
 
         emit JobRegistered(jobId, msg.sender, budget);
@@ -97,12 +103,13 @@ contract JobOrchestrator is IJobOrchestrator {
         uint256 cpu,
         uint256 gpuVram,
         uint256 ram
-    ) external override returns (bool) {
+    ) external payable override returns (bool) {
         Job storage job = jobs[jobId];
         require(job.state == JobState.BiddingOpen, "Bidding is not open for this job");
         require(cpu >= job.minCpu, "Insufficient CPU");
         require(gpuVram >= job.minGpuVram, "Insufficient GPU VRAM");
         require(ram >= job.minRam, "Insufficient RAM");
+        require(msg.value == stake, "ETH sent must match stake amount");
         
         if (bids[jobId][msg.sender] == 0) {
             jobBidders[jobId].push(msg.sender);
@@ -135,6 +142,17 @@ contract JobOrchestrator is IJobOrchestrator {
 
         job.assignedWorker = winner;
         job.state = JobState.Assigned;
+        job.assignedTimestamp = block.timestamp;
+        
+        // Refund all other bidders
+        for (uint i = 0; i < jobBidders[jobId].length; i++) {
+            address bidder = jobBidders[jobId][i];
+            if (bidder != winner) {
+                uint256 refundAmount = bids[jobId][bidder];
+                bids[jobId][bidder] = 0;
+                payable(bidder).transfer(refundAmount);
+            }
+        }
         
         emit WorkerAssigned(jobId, winner);
         return winner;
@@ -155,6 +173,33 @@ contract JobOrchestrator is IJobOrchestrator {
         
         job.resultHash = proofHash;
         job.state = JobState.ProofSubmitted;
+    }
+
+    function slashWorker(uint256 jobId) external override {
+        Job storage job = jobs[jobId];
+        require(job.state == JobState.Assigned || job.state == JobState.Executing, "Job not in slashable state");
+        require(block.timestamp > job.assignedTimestamp + 5 minutes, "Timeout has not been reached");
+        
+        uint256 slashedStake = bids[jobId][job.assignedWorker];
+        bids[jobId][job.assignedWorker] = 0;
+        
+        job.state = JobState.Slashed;
+        
+        if (slashedStake > 0) {
+            payable(job.client).transfer(slashedStake);
+        }
+    }
+
+    function releaseStake(uint256 jobId) external override {
+        Job storage job = jobs[jobId];
+        require(msg.sender == job.assignedWorker, "Only assigned worker can release stake");
+        require(job.state == JobState.ProofSubmitted || job.state == JobState.Completed, "Proof not submitted");
+        
+        uint256 stake = bids[jobId][msg.sender];
+        require(stake > 0, "No stake to release");
+        
+        bids[jobId][msg.sender] = 0;
+        payable(msg.sender).transfer(stake);
     }
 
     function getJobState(uint256 jobId) external view override returns (JobState) {

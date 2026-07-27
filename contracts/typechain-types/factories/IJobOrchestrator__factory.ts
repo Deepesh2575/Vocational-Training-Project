@@ -85,6 +85,11 @@ const _abi = [
             name: "resultHash",
             type: "bytes32",
           },
+          {
+            internalType: "uint256",
+            name: "assignedTimestamp",
+            type: "uint256",
+          },
         ],
         internalType: "struct Job",
         name: "",
@@ -172,6 +177,32 @@ const _abi = [
         name: "jobId",
         type: "uint256",
       },
+    ],
+    name: "releaseStake",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "jobId",
+        type: "uint256",
+      },
+    ],
+    name: "slashWorker",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "jobId",
+        type: "uint256",
+      },
       {
         internalType: "uint256",
         name: "stake",
@@ -201,7 +232,7 @@ const _abi = [
         type: "bool",
       },
     ],
-    stateMutability: "nonpayable",
+    stateMutability: "payable",
     type: "function",
   },
   {
