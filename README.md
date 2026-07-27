@@ -180,10 +180,11 @@ To avoid managing multiple terminal windows and Python environments manually, yo
 4. It starts the Blockchain, Mock IPFS Server, Worker Node, and Client SDK in the correct order.
 5. Watch the "Worker Node" and "Client SDK" terminals to see the process execute.
 
-### 🛠️ Manual Execution (For Linux/Mac or Troubleshooting)
+### 🛠️ Manual Execution (Without Batch File)
 
-If you prefer to run it manually, follow these steps across multiple terminal windows:
-### Terminal 1: Start Local Blockchain
+If you prefer to run the components manually, you must open **5 separate terminal windows**. To avoid environment activation issues, we recommend using the direct path to the virtual environment's Python executable.
+
+### Terminal 1: Start Local Blockchain (Hardhat)
 ```bash
 cd contracts
 npx hardhat node
@@ -195,31 +196,41 @@ Leave Terminal 1 running and open a new terminal:
 cd contracts
 npx hardhat run scripts/deploy.ts --network localhost
 ```
-*Make sure the deployed address matches the one hardcoded in `apps/client-sdk/client.py` and `apps/worker-runtime/worker.py` (currently `0x5FbDB2315678afecb367f032d93F642f64180aa3`).*
+*Wait for it to say "Contract Deployed!", then you can safely close this terminal.*
 
 ### Terminal 3: Start Mock IPFS Server
-Open a new terminal. Make sure your Python virtual environment is activated:
+Open a new terminal. Run the IPFS simulation:
 ```bash
-# Activate virtual environment first
-# Windows: .venv\Scripts\activate
-# Linux/Mac: source .venv/bin/activate
+# Windows
+.venv\Scripts\python.exe apps\mock_ipfs.py
 
-python apps/mock_ipfs.py
+# Linux/Mac
+.venv/bin/python apps/mock_ipfs.py
 ```
 
 ### Terminal 4: Start the Worker Node
-Open a new terminal. Activate the virtual environment:
+Open a new terminal. Launch the confidential worker:
 ```bash
 cd apps/worker-runtime
-python worker.py
+
+# Windows
+..\..\.venv\Scripts\python.exe worker.py
+
+# Linux/Mac
+../../.venv/bin/python worker.py
 ```
 *The worker will initialize, connect to the blockchain, and listen for `JobRegistered` events.*
 
 ### Terminal 5: Submit a Job as the Client
-Open a new terminal. Activate the virtual environment:
+Open a new terminal. Launch the client SDK to submit a workload:
 ```bash
 cd apps/client-sdk
-python client.py
+
+# Windows
+..\..\.venv\Scripts\python.exe client.py
+
+# Linux/Mac
+../../.venv/bin/python client.py
 ```
 
 ### What you will see:
