@@ -107,12 +107,19 @@ export interface IJobOrchestratorInterface extends Interface {
       BigNumberish,
       BigNumberish,
       BigNumberish,
-      BigNumberish
+      BigNumberish,
+      BytesLike
     ]
   ): string;
   encodeFunctionData(
     functionFragment: "submitProof",
-    values: [BigNumberish, BytesLike]
+    values: [
+      BigNumberish,
+      [BigNumberish, BigNumberish],
+      [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]],
+      [BigNumberish, BigNumberish],
+      [BigNumberish]
+    ]
   ): string;
 
   decodeFunctionResult(
@@ -232,14 +239,21 @@ export interface IJobOrchestrator extends BaseContract {
       stake: BigNumberish,
       cpu: BigNumberish,
       gpuVram: BigNumberish,
-      ram: BigNumberish
+      ram: BigNumberish,
+      enclaveQuote: BytesLike
     ],
     [boolean],
     "payable"
   >;
 
   submitProof: TypedContractMethod<
-    [jobId: BigNumberish, proofHash: BytesLike],
+    [
+      jobId: BigNumberish,
+      a: [BigNumberish, BigNumberish],
+      b: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]],
+      c: [BigNumberish, BigNumberish],
+      input: [BigNumberish]
+    ],
     [void],
     "nonpayable"
   >;
@@ -287,7 +301,8 @@ export interface IJobOrchestrator extends BaseContract {
       stake: BigNumberish,
       cpu: BigNumberish,
       gpuVram: BigNumberish,
-      ram: BigNumberish
+      ram: BigNumberish,
+      enclaveQuote: BytesLike
     ],
     [boolean],
     "payable"
@@ -295,7 +310,13 @@ export interface IJobOrchestrator extends BaseContract {
   getFunction(
     nameOrSignature: "submitProof"
   ): TypedContractMethod<
-    [jobId: BigNumberish, proofHash: BytesLike],
+    [
+      jobId: BigNumberish,
+      a: [BigNumberish, BigNumberish],
+      b: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]],
+      c: [BigNumberish, BigNumberish],
+      input: [BigNumberish]
+    ],
     [void],
     "nonpayable"
   >;

@@ -78,7 +78,12 @@ export interface JobOrchestratorInterface extends Interface {
   ): FunctionFragment;
 
   getEvent(
-    nameOrSignatureOrTopic: "BidSubmitted" | "JobRegistered" | "WorkerAssigned"
+    nameOrSignatureOrTopic:
+      | "BidSubmitted"
+      | "JobRegistered"
+      | "ProofSubmitted"
+      | "TeeQuoteVerified"
+      | "WorkerAssigned"
   ): EventFragment;
 
   encodeFunctionData(
@@ -125,12 +130,19 @@ export interface JobOrchestratorInterface extends Interface {
       BigNumberish,
       BigNumberish,
       BigNumberish,
-      BigNumberish
+      BigNumberish,
+      BytesLike
     ]
   ): string;
   encodeFunctionData(
     functionFragment: "submitProof",
-    values: [BigNumberish, BytesLike]
+    values: [
+      BigNumberish,
+      [BigNumberish, BigNumberish],
+      [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]],
+      [BigNumberish, BigNumberish],
+      [BigNumberish]
+    ]
   ): string;
 
   decodeFunctionResult(
@@ -197,6 +209,32 @@ export namespace JobRegisteredEvent {
     jobId: bigint;
     client: string;
     budget: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace ProofSubmittedEvent {
+  export type InputTuple = [jobId: BigNumberish, resultHash: BytesLike];
+  export type OutputTuple = [jobId: bigint, resultHash: string];
+  export interface OutputObject {
+    jobId: bigint;
+    resultHash: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace TeeQuoteVerifiedEvent {
+  export type InputTuple = [jobId: BigNumberish, worker: AddressLike];
+  export type OutputTuple = [jobId: bigint, worker: string];
+  export interface OutputObject {
+    jobId: bigint;
+    worker: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -344,14 +382,21 @@ export interface JobOrchestrator extends BaseContract {
       stake: BigNumberish,
       cpu: BigNumberish,
       gpuVram: BigNumberish,
-      ram: BigNumberish
+      ram: BigNumberish,
+      enclaveQuote: BytesLike
     ],
     [boolean],
     "payable"
   >;
 
   submitProof: TypedContractMethod<
-    [jobId: BigNumberish, proofHash: BytesLike],
+    [
+      jobId: BigNumberish,
+      a: [BigNumberish, BigNumberish],
+      b: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]],
+      c: [BigNumberish, BigNumberish],
+      input: [BigNumberish]
+    ],
     [void],
     "nonpayable"
   >;
@@ -444,7 +489,8 @@ export interface JobOrchestrator extends BaseContract {
       stake: BigNumberish,
       cpu: BigNumberish,
       gpuVram: BigNumberish,
-      ram: BigNumberish
+      ram: BigNumberish,
+      enclaveQuote: BytesLike
     ],
     [boolean],
     "payable"
@@ -452,7 +498,13 @@ export interface JobOrchestrator extends BaseContract {
   getFunction(
     nameOrSignature: "submitProof"
   ): TypedContractMethod<
-    [jobId: BigNumberish, proofHash: BytesLike],
+    [
+      jobId: BigNumberish,
+      a: [BigNumberish, BigNumberish],
+      b: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]],
+      c: [BigNumberish, BigNumberish],
+      input: [BigNumberish]
+    ],
     [void],
     "nonpayable"
   >;
@@ -470,6 +522,20 @@ export interface JobOrchestrator extends BaseContract {
     JobRegisteredEvent.InputTuple,
     JobRegisteredEvent.OutputTuple,
     JobRegisteredEvent.OutputObject
+  >;
+  getEvent(
+    key: "ProofSubmitted"
+  ): TypedContractEvent<
+    ProofSubmittedEvent.InputTuple,
+    ProofSubmittedEvent.OutputTuple,
+    ProofSubmittedEvent.OutputObject
+  >;
+  getEvent(
+    key: "TeeQuoteVerified"
+  ): TypedContractEvent<
+    TeeQuoteVerifiedEvent.InputTuple,
+    TeeQuoteVerifiedEvent.OutputTuple,
+    TeeQuoteVerifiedEvent.OutputObject
   >;
   getEvent(
     key: "WorkerAssigned"
@@ -500,6 +566,28 @@ export interface JobOrchestrator extends BaseContract {
       JobRegisteredEvent.InputTuple,
       JobRegisteredEvent.OutputTuple,
       JobRegisteredEvent.OutputObject
+    >;
+
+    "ProofSubmitted(uint256,bytes32)": TypedContractEvent<
+      ProofSubmittedEvent.InputTuple,
+      ProofSubmittedEvent.OutputTuple,
+      ProofSubmittedEvent.OutputObject
+    >;
+    ProofSubmitted: TypedContractEvent<
+      ProofSubmittedEvent.InputTuple,
+      ProofSubmittedEvent.OutputTuple,
+      ProofSubmittedEvent.OutputObject
+    >;
+
+    "TeeQuoteVerified(uint256,address)": TypedContractEvent<
+      TeeQuoteVerifiedEvent.InputTuple,
+      TeeQuoteVerifiedEvent.OutputTuple,
+      TeeQuoteVerifiedEvent.OutputObject
+    >;
+    TeeQuoteVerified: TypedContractEvent<
+      TeeQuoteVerifiedEvent.InputTuple,
+      TeeQuoteVerifiedEvent.OutputTuple,
+      TeeQuoteVerifiedEvent.OutputObject
     >;
 
     "WorkerAssigned(uint256,address)": TypedContractEvent<

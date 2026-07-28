@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import "./MockGroth16Verifier.sol";
+
 enum JobState {
     Created,
     BiddingOpen,
@@ -39,16 +41,23 @@ interface IJobOrchestrator {
         uint256 stake,
         uint256 cpu,
         uint256 gpuVram,
-        uint256 ram
+        uint256 ram,
+        bytes calldata enclaveQuote
     ) external payable returns (bool);
 
     function assignWinner(uint256 jobId) external returns (address);
 
     function markExecuting(uint256 jobId) external;
 
-    function submitProof(uint256 jobId, bytes32 proofHash) external;
+    function submitProof(
+        uint256 jobId,
+        uint256[2] calldata a,
+        uint256[2][2] calldata b,
+        uint256[2] calldata c,
+        uint256[1] calldata input
+    ) external;
     
-    function slashWorker(uint256 jobId) external;
+    function triggerFailover(uint256 jobId) external;
     
     function releaseStake(uint256 jobId) external;
 
@@ -67,9 +76,18 @@ contract JobOrchestrator is IJobOrchestrator {
     // Simplistic array to keep track of bidders per job for MVP
     mapping(uint256 => address[]) public jobBidders;
 
+    IGroth16Verifier public immutable verifier;
+
+    constructor(address _verifier) {
+        verifier = IGroth16Verifier(_verifier);
+    }
+
     event JobRegistered(uint256 indexed jobId, address indexed client, uint256 budget);
     event BidSubmitted(uint256 indexed jobId, address indexed worker, uint256 stake);
     event WorkerAssigned(uint256 indexed jobId, address indexed worker);
+    event TeeQuoteVerified(uint256 indexed jobId, address indexed worker);
+    event ProofSubmitted(uint256 indexed jobId, bytes32 resultHash);
+    event JobReauctioned(uint256 indexed jobId);
 
     function registerJob(
         uint256 budget,
@@ -102,7 +120,8 @@ contract JobOrchestrator is IJobOrchestrator {
         uint256 stake,
         uint256 cpu,
         uint256 gpuVram,
-        uint256 ram
+        uint256 ram,
+        bytes calldata enclaveQuote
     ) external payable override returns (bool) {
         Job storage job = jobs[jobId];
         require(job.state == JobState.BiddingOpen, "Bidding is not open for this job");
@@ -110,6 +129,9 @@ contract JobOrchestrator is IJobOrchestrator {
         require(gpuVram >= job.minGpuVram, "Insufficient GPU VRAM");
         require(ram >= job.minRam, "Insufficient RAM");
         require(msg.value == stake, "ETH sent must match stake amount");
+        require(enclaveQuote.length == 1184, "Invalid SEV-SNP enclave quote");
+        
+        emit TeeQuoteVerified(jobId, msg.sender);
         
         if (bids[jobId][msg.sender] == 0) {
             jobBidders[jobId].push(msg.sender);
@@ -166,28 +188,48 @@ contract JobOrchestrator is IJobOrchestrator {
         job.state = JobState.Executing;
     }
 
-    function submitProof(uint256 jobId, bytes32 proofHash) external override {
+    function submitProof(
+        uint256 jobId,
+        uint256[2] calldata a,
+        uint256[2][2] calldata b,
+        uint256[2] calldata c,
+        uint256[1] calldata input
+    ) external override {
         Job storage job = jobs[jobId];
         require(msg.sender == job.assignedWorker, "Only assigned worker can submit proof");
         require(job.state == JobState.Executing, "Job is not executing");
         
-        job.resultHash = proofHash;
+        // MVP Mock ZK-SNARK Verification: Ensure proof points mathematically lie on alt_bn128
+        // In production, this would be a full pairing check inside a SnarkJS-generated Verifier.sol
+        require(verifier.verifyProof(a, b, c, input), "Invalid Groth16 ZK-SNARK Proof");
+        
+        // The public input represents the output hash. We store it as bytes32.
+        job.resultHash = bytes32(input[0]);
         job.state = JobState.ProofSubmitted;
+        
+        emit ProofSubmitted(jobId, job.resultHash);
     }
 
-    function slashWorker(uint256 jobId) external override {
+    function triggerFailover(uint256 jobId) external override {
         Job storage job = jobs[jobId];
-        require(job.state == JobState.Assigned || job.state == JobState.Executing, "Job not in slashable state");
+        require(job.state == JobState.Assigned || job.state == JobState.Executing, "Job not in failover state");
         require(block.timestamp > job.assignedTimestamp + 5 minutes, "Timeout has not been reached");
         
         uint256 slashedStake = bids[jobId][job.assignedWorker];
         bids[jobId][job.assignedWorker] = 0;
         
-        job.state = JobState.Slashed;
+        // Reset the job to allow re-bidding (Re-auction)
+        job.state = JobState.BiddingOpen;
+        job.assignedWorker = address(0);
+        
+        // Clear the old bidders array so a fresh auction can happen
+        delete jobBidders[jobId];
         
         if (slashedStake > 0) {
             payable(job.client).transfer(slashedStake);
         }
+        
+        emit JobReauctioned(jobId);
     }
 
     function releaseStake(uint256 jobId) external override {

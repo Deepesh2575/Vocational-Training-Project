@@ -223,6 +223,11 @@ const _abi = [
         name: "ram",
         type: "uint256",
       },
+      {
+        internalType: "bytes",
+        name: "enclaveQuote",
+        type: "bytes",
+      },
     ],
     name: "submitBid",
     outputs: [
@@ -243,9 +248,24 @@ const _abi = [
         type: "uint256",
       },
       {
-        internalType: "bytes32",
-        name: "proofHash",
-        type: "bytes32",
+        internalType: "uint256[2]",
+        name: "a",
+        type: "uint256[2]",
+      },
+      {
+        internalType: "uint256[2][2]",
+        name: "b",
+        type: "uint256[2][2]",
+      },
+      {
+        internalType: "uint256[2]",
+        name: "c",
+        type: "uint256[2]",
+      },
+      {
+        internalType: "uint256[1]",
+        name: "input",
+        type: "uint256[1]",
       },
     ],
     name: "submitProof",

@@ -21,6 +21,14 @@ declare module "hardhat/types/runtime" {
       name: "JobOrchestrator",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.JobOrchestrator__factory>;
+    getContractFactory(
+      name: "IGroth16Verifier",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IGroth16Verifier__factory>;
+    getContractFactory(
+      name: "MockGroth16Verifier",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.MockGroth16Verifier__factory>;
 
     getContractAt(
       name: "IJobOrchestrator",
@@ -32,6 +40,16 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.JobOrchestrator>;
+    getContractAt(
+      name: "IGroth16Verifier",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IGroth16Verifier>;
+    getContractAt(
+      name: "MockGroth16Verifier",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.MockGroth16Verifier>;
 
     deployContract(
       name: "IJobOrchestrator",
@@ -41,6 +59,14 @@ declare module "hardhat/types/runtime" {
       name: "JobOrchestrator",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.JobOrchestrator>;
+    deployContract(
+      name: "IGroth16Verifier",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IGroth16Verifier>;
+    deployContract(
+      name: "MockGroth16Verifier",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.MockGroth16Verifier>;
 
     deployContract(
       name: "IJobOrchestrator",
@@ -52,6 +78,16 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.JobOrchestrator>;
+    deployContract(
+      name: "IGroth16Verifier",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IGroth16Verifier>;
+    deployContract(
+      name: "MockGroth16Verifier",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.MockGroth16Verifier>;
 
     // default types
     getContractFactory(

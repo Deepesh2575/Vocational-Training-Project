@@ -183,19 +183,6 @@
           "internalType": "uint256",
           "name": "jobId",
           "type": "uint256"
-        }
-      ],
-      "name": "slashWorker",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "jobId",
-          "type": "uint256"
         },
         {
           "internalType": "uint256",
@@ -216,6 +203,11 @@
           "internalType": "uint256",
           "name": "ram",
           "type": "uint256"
+        },
+        {
+          "internalType": "bytes",
+          "name": "enclaveQuote",
+          "type": "bytes"
         }
       ],
       "name": "submitBid",
@@ -237,12 +229,40 @@
           "type": "uint256"
         },
         {
-          "internalType": "bytes32",
-          "name": "proofHash",
-          "type": "bytes32"
+          "internalType": "uint256[2]",
+          "name": "a",
+          "type": "uint256[2]"
+        },
+        {
+          "internalType": "uint256[2][2]",
+          "name": "b",
+          "type": "uint256[2][2]"
+        },
+        {
+          "internalType": "uint256[2]",
+          "name": "c",
+          "type": "uint256[2]"
+        },
+        {
+          "internalType": "uint256[1]",
+          "name": "input",
+          "type": "uint256[1]"
         }
       ],
       "name": "submitProof",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "jobId",
+          "type": "uint256"
+        }
+      ],
+      "name": "triggerFailover",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
