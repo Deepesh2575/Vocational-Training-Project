@@ -51,7 +51,7 @@ pub fn perform_hybrid_kex(
 // ==========================================
 
 #[pyfunction]
-fn generate_client_keys<'a>(py: Python<'a>) -> PyResult<(Bound<'a, PyBytes>, Bound<'a, PyBytes>, Bound<'a, PyBytes>, Bound<'a, PyBytes>)> {
+fn generate_hybrid_keypair<'a>(py: Python<'a>) -> PyResult<(Bound<'a, PyBytes>, Bound<'a, PyBytes>, Bound<'a, PyBytes>, Bound<'a, PyBytes>)> {
     let mut client_rng = OsRng;
     let kyber_keys = pqc_kyber::keypair(&mut client_rng).map_err(|_| PyValueError::new_err("Kyber keygen failed"))?;
     
@@ -67,43 +67,44 @@ fn generate_client_keys<'a>(py: Python<'a>) -> PyResult<(Bound<'a, PyBytes>, Bou
 }
 
 #[pyfunction]
-fn worker_encapsulate<'a>(
+fn client_encapsulate<'a>(
     py: Python<'a>, 
-    client_kyber_pk: &[u8], 
-    client_x25519_pk: &[u8]
-) -> PyResult<(Bound<'a, PyBytes>, Bound<'a, PyBytes>)> {
-    let output = perform_hybrid_kex(client_kyber_pk, client_x25519_pk)
+    worker_kyber_pk: &[u8], 
+    worker_x25519_pk: &[u8]
+) -> PyResult<(Bound<'a, PyBytes>, Bound<'a, PyBytes>, Bound<'a, PyBytes>)> {
+    let output = perform_hybrid_kex(worker_kyber_pk, worker_x25519_pk)
         .map_err(|e| PyValueError::new_err(e))?;
     
     Ok((
         PyBytes::new_bound(py, &output.kyber_ciphertext),
-        PyBytes::new_bound(py, &output.x25519_ephemeral_pk)
+        PyBytes::new_bound(py, &output.x25519_ephemeral_pk),
+        PyBytes::new_bound(py, &output.shared_secret)
     ))
 }
 
 #[pyfunction]
-fn client_decapsulate<'a>(
+fn worker_decapsulate<'a>(
     py: Python<'a>,
-    worker_kyber_ct: &[u8],
-    worker_x25519_pk: &[u8],
-    client_kyber_sk: &[u8],
-    client_x25519_sk: &[u8]
+    kyber_ciphertext: &[u8],
+    client_x25519_ephemeral_pk: &[u8],
+    worker_kyber_sk: &[u8],
+    worker_x25519_sk: &[u8]
 ) -> PyResult<Bound<'a, PyBytes>> {
-    let kyber_ss = pqc_kyber::decapsulate(worker_kyber_ct, client_kyber_sk)
+    let kyber_ss = pqc_kyber::decapsulate(kyber_ciphertext, worker_kyber_sk)
         .map_err(|_| PyValueError::new_err("Kyber decapsulation failed"))?;
 
     let mut sk_bytes = [0u8; 32];
-    if client_x25519_sk.len() != 32 {
+    if worker_x25519_sk.len() != 32 {
         return Err(PyValueError::new_err("Invalid X25519 SK length"));
     }
-    sk_bytes.copy_from_slice(client_x25519_sk);
+    sk_bytes.copy_from_slice(worker_x25519_sk);
     let sk = StaticSecret::from(sk_bytes);
 
     let mut pk_bytes = [0u8; 32];
-    if worker_x25519_pk.len() != 32 {
+    if client_x25519_ephemeral_pk.len() != 32 {
         return Err(PyValueError::new_err("Invalid X25519 PK length"));
     }
-    pk_bytes.copy_from_slice(worker_x25519_pk);
+    pk_bytes.copy_from_slice(client_x25519_ephemeral_pk);
     let pk = PublicKey::from(pk_bytes);
 
     let x25519_ss = sk.diffie_hellman(&pk);
@@ -178,9 +179,9 @@ fn verify_signature(public_key: &[u8], message: &[u8], signature: &[u8]) -> PyRe
 
 #[pymodule]
 fn crypto_pqc(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(generate_client_keys, m)?)?;
-    m.add_function(wrap_pyfunction!(worker_encapsulate, m)?)?;
-    m.add_function(wrap_pyfunction!(client_decapsulate, m)?)?;
+    m.add_function(wrap_pyfunction!(generate_hybrid_keypair, m)?)?;
+    m.add_function(wrap_pyfunction!(client_encapsulate, m)?)?;
+    m.add_function(wrap_pyfunction!(worker_decapsulate, m)?)?;
     
     // ML-DSA exports
     m.add_function(wrap_pyfunction!(generate_mldsa_keys, m)?)?;

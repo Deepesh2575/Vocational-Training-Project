@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: relayer-daemon
+  labels:
+    app: relayer-daemon
+spec:
+  replicas: 1 # Must remain 1 to avoid nonce collisions/duplicate relaying unless leader election is implemented
+  selector:
+    matchLabels:
+      app: relayer-daemon
+  template:
+    metadata:
+      labels:
+        app: relayer-daemon
+    spec:
+      containers:
+      - name: relayer
+        image: my-registry/relayer:latest # Replace with actual ECR/DockerHub image
+        imagePullPolicy: Always
+        env:
+        - name: WEB3_PROVIDER_URL
+          value: "http://my-rpc-endpoint:8545" # Replace with Alchemy/Infura URL
+        - name: RELAYER_PRIVATE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: relayer-secrets
+              key: private-key
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"

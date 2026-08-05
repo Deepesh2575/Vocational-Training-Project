@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "C:\\Users\\DEEPESH\\Downloads\\VT  project 2\\contracts\\contracts\\JobOrchestrator.sol": {
-      "lastModificationDate": 1785178861776,
-      "contentHash": "6dd736cb41546c75a22784f3ba54b718",
+      "lastModificationDate": 1785906732362,
+      "contentHash": "8ceb090a678cc7348477fb61c29e13c6",
       "sourceName": "contracts/JobOrchestrator.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -30,13 +30,13 @@
         }
       },
       "imports": [
-        "./MockGroth16Verifier.sol"
+        "./MockGroth16Verifier.sol",
+        "@openzeppelin/contracts/access/Ownable.sol"
       ],
       "versionPragmas": [
         "^0.8.24"
       ],
       "artifacts": [
-        "IJobOrchestrator",
         "JobOrchestrator"
       ]
     },
@@ -75,6 +75,156 @@
       "artifacts": [
         "IGroth16Verifier",
         "MockGroth16Verifier"
+      ]
+    },
+    "C:\\Users\\DEEPESH\\Downloads\\VT  project 2\\contracts\\node_modules\\@openzeppelin\\contracts\\access\\Ownable.sol": {
+      "lastModificationDate": 1785221987625,
+      "contentHash": "d3c790edc9ccf808a17c5a6cd13614fd",
+      "sourceName": "@openzeppelin/contracts/access/Ownable.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../utils/Context.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "Ownable"
+      ]
+    },
+    "C:\\Users\\DEEPESH\\Downloads\\VT  project 2\\contracts\\node_modules\\@openzeppelin\\contracts\\utils\\Context.sol": {
+      "lastModificationDate": 1785221987225,
+      "contentHash": "67bfbc07588eb8683b3fd8f6f909563e",
+      "sourceName": "@openzeppelin/contracts/utils/Context.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "Context"
+      ]
+    },
+    "C:\\Users\\DEEPESH\\Downloads\\VT  project 2\\contracts\\contracts\\ProtocolGovernance.sol": {
+      "lastModificationDate": 1785222112913,
+      "contentHash": "4915d445c4edda4b6b7430abd5eaea85",
+      "sourceName": "contracts/ProtocolGovernance.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/access/Ownable.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "ProtocolGovernance"
+      ]
+    },
+    "C:\\Users\\DEEPESH\\Downloads\\VT  project 2\\contracts\\contracts\\ClientGateway.sol": {
+      "lastModificationDate": 1785222472856,
+      "contentHash": "cce8144919a4d248aa221c7490e20e5a",
+      "sourceName": "contracts/ClientGateway.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/access/Ownable.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "ClientGateway"
       ]
     }
   }

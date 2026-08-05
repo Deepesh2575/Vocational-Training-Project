@@ -14,9 +14,13 @@ import * as Contracts from ".";
 declare module "hardhat/types/runtime" {
   interface HardhatEthersHelpers extends HardhatEthersHelpersBase {
     getContractFactory(
-      name: "IJobOrchestrator",
+      name: "Ownable",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IJobOrchestrator__factory>;
+    ): Promise<Contracts.Ownable__factory>;
+    getContractFactory(
+      name: "ClientGateway",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ClientGateway__factory>;
     getContractFactory(
       name: "JobOrchestrator",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -29,12 +33,21 @@ declare module "hardhat/types/runtime" {
       name: "MockGroth16Verifier",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.MockGroth16Verifier__factory>;
+    getContractFactory(
+      name: "ProtocolGovernance",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ProtocolGovernance__factory>;
 
     getContractAt(
-      name: "IJobOrchestrator",
+      name: "Ownable",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
-    ): Promise<Contracts.IJobOrchestrator>;
+    ): Promise<Contracts.Ownable>;
+    getContractAt(
+      name: "ClientGateway",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ClientGateway>;
     getContractAt(
       name: "JobOrchestrator",
       address: string | ethers.Addressable,
@@ -50,11 +63,20 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.MockGroth16Verifier>;
+    getContractAt(
+      name: "ProtocolGovernance",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ProtocolGovernance>;
 
     deployContract(
-      name: "IJobOrchestrator",
+      name: "Ownable",
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IJobOrchestrator>;
+    ): Promise<Contracts.Ownable>;
+    deployContract(
+      name: "ClientGateway",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ClientGateway>;
     deployContract(
       name: "JobOrchestrator",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -67,12 +89,21 @@ declare module "hardhat/types/runtime" {
       name: "MockGroth16Verifier",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.MockGroth16Verifier>;
+    deployContract(
+      name: "ProtocolGovernance",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ProtocolGovernance>;
 
     deployContract(
-      name: "IJobOrchestrator",
+      name: "Ownable",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IJobOrchestrator>;
+    ): Promise<Contracts.Ownable>;
+    deployContract(
+      name: "ClientGateway",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ClientGateway>;
     deployContract(
       name: "JobOrchestrator",
       args: any[],
@@ -88,6 +119,11 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.MockGroth16Verifier>;
+    deployContract(
+      name: "ProtocolGovernance",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ProtocolGovernance>;
 
     // default types
     getContractFactory(

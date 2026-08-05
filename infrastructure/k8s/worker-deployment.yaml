@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-node
+  labels:
+    app: worker-node
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: worker-node
+  template:
+    metadata:
+      labels:
+        app: worker-node
+    spec:
+      containers:
+      - name: worker
+        image: my-registry/worker:latest # Replace with actual image
+        imagePullPolicy: Always
+        env:
+        - name: WEB3_PROVIDER_URL
+          value: "http://my-rpc-endpoint:8545"
+        - name: IPFS_GATEWAY_URL
+          value: "http://ipfs-gateway-svc:8080"
+        # Each worker pod needs a unique private key for its wallet in production.
+        # This could be injected via Vault or dynamically generated on startup if using abstracted wallets.
+        - name: WORKER_PRIVATE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: worker-secrets
+              key: private-key
+        resources:
+          requests:
+            cpu: "1"
+            memory: "2Gi"
+          limits:
+            cpu: "2"
+            memory: "4Gi"

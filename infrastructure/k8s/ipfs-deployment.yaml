@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ipfs-gateway
+  labels:
+    app: ipfs-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ipfs-gateway
+  template:
+    metadata:
+      labels:
+        app: ipfs-gateway
+    spec:
+      containers:
+      - name: ipfs
+        image: ipfs/kubo:latest
+        ports:
+        - containerPort: 4001
+          name: swarm
+        - containerPort: 5001
+          name: api
+        - containerPort: 8080
+          name: gateway
+        volumeMounts:
+        - name: ipfs-storage
+          mountPath: /data/ipfs
+      volumes:
+      - name: ipfs-storage
+        emptyDir: {} # Use persistent volume claim (PVC) in real production
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ipfs-gateway-svc
+spec:
+  selector:
+    app: ipfs-gateway
+  ports:
+  - port: 5001
+    targetPort: 5001
+    name: api
+  - port: 8080
+    targetPort: 8080
+    name: gateway

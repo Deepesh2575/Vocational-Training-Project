@@ -6,6 +6,8 @@ import sys
 import subprocess
 import struct
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives import serialization, hashes
 from web3 import Web3
 import zk_prover
 
@@ -33,6 +35,13 @@ class ConfidentialWorkerNode:
         self.gpuVram = 32
         self.ram = 64
         self.stake = self.w3.to_wei(1, 'ether') # 1 ETH stake for MVP
+        
+        # Generate persistent in-memory identity (PQC Hybrid Keypair)
+        print("[Worker] Generating In-Memory Identity (Kyber + X25519)...")
+        self.kyber_pk, self.kyber_sk, self.x25519_pk, self.x25519_sk = crypto_pqc.generate_hybrid_keypair()
+        
+        # Serialize public keys as hex for the smart contract (kyber_pk:x25519_pk)
+        self.public_key_string = f"{self.kyber_pk.hex()}:{self.x25519_pk.hex()}"
 
     def submit_bid(self, job_id: int):
         print(f"[Worker] Generating TEE Enclave Attestation Quote before bidding...")
@@ -42,7 +51,7 @@ class ConfidentialWorkerNode:
         
         nonce = self.w3.eth.get_transaction_count(self.account.address)
         tx = self.contract.functions.submitBid(
-            job_id, self.stake, self.cpu, self.gpuVram, self.ram, enclave_quote
+            job_id, self.stake, self.cpu, self.gpuVram, self.ram, enclave_quote, self.public_key_string
         ).build_transaction({
             'from': self.account.address,
             'nonce': nonce,
@@ -101,7 +110,7 @@ class ConfidentialWorkerNode:
         self.w3.eth.wait_for_transaction_receipt(tx_hash)
         print(f"Successfully reclaimed {self.w3.from_wei(self.stake, 'ether')} ETH stake!")
 
-    def simulate_execution(self, job_id: int, cid: str):
+    def simulate_execution(self, job_id: int, cid: str, encrypted_session_key_hex: str):
         print(f"\n--- [TEE Enclave] Executing Job ID {job_id} ---")
         time.sleep(2) # Simulate compute delay
         
@@ -148,13 +157,28 @@ class ConfidentialWorkerNode:
                 
         print("Compute workload finished successfully.")
         
-        # 1. Read the temporary session key
+        # 1. Decapsulate the session key using our in-memory PQC secret keys
         try:
-            shared_key_path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")), "shared_key.bin")
-            with open(shared_key_path, "rb") as f:
-                session_key = f.read()
-        except FileNotFoundError:
-            print("[Worker] FATAL: shared_key.bin not found. Cannot decrypt payload.")
+            parts = encrypted_session_key_hex.split(':')
+            if len(parts) != 4:
+                raise Exception("Invalid encapsulated key format (expected kyber_ct:x25519_pk:nonce:wrapped_key)")
+                
+            kyber_ct = bytes.fromhex(parts[0])
+            client_x25519_ephemeral_pk = bytes.fromhex(parts[1])
+            kek_nonce = bytes.fromhex(parts[2])
+            wrapped_session_key = bytes.fromhex(parts[3])
+            
+            print("[Worker] Decapsulating KEK securely using in-memory PQC Secret Keys...")
+            shared_secret = crypto_pqc.worker_decapsulate(
+                kyber_ct, client_x25519_ephemeral_pk, self.kyber_sk, self.x25519_sk
+            )
+            
+            print("[Worker] Unwrapping AES session key...")
+            from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+            kek_aesgcm = AESGCM(shared_secret[:32])
+            session_key = kek_aesgcm.decrypt(kek_nonce, wrapped_session_key, None)
+        except Exception as e:
+            print(f"[Worker] FATAL: Failed to decapsulate session key from IPFS manifest: {e}")
             return b""
             
         aes_key = session_key[:32]
@@ -198,9 +222,9 @@ class ConfidentialWorkerNode:
         proof_data = zk_prover.generate_groth16_proof(execution_output)
         print(f"Generated ZK Proof Public Input (Hash): {proof_data['raw_hash'].hex()}")
         
-        # 6. Generate TEE Hardware Attestation Report (e.g., AMD SEV-SNP)
+        # 6. Generate TEE Hardware Attestation Report (AMD SEV-SNP or Intel TDX)
         # We bind the result hash to the hardware report using the user_data/report_data field
-        attestation_report = self.get_sev_snp_report(proof_data["raw_hash"])
+        attestation_report = self.get_tee_attestation_report(proof_data["raw_hash"])
         if attestation_report:
             print(f"[Worker] Hardware Attestation Report generated successfully! Length: {len(attestation_report)} bytes")
             # In a full implementation, this report would be submitted on-chain or to an off-chain verifier
@@ -208,50 +232,112 @@ class ConfidentialWorkerNode:
         
         return proof_data
 
-    def get_sev_snp_report(self, report_data: bytes) -> bytes:
+    def get_tee_attestation_report(self, report_data: bytes) -> bytes:
         """
-        Interacts with the AMD SEV-SNP guest device driver to request a hardware attestation report.
-        If the device is not present (e.g., when testing locally on Windows/non-SNP hardware),
-        it generates a mocked report for testing purposes.
+        Interacts with the TEE guest device driver to request a hardware attestation report.
+        Supports both AMD SEV-SNP (/dev/sev-guest) and Intel TDX (/dev/tdx_guest) (e.g. AWS m7i).
+        If no device is present, generates a mocked report for testing purposes.
         """
-        SEV_GUEST_DEVICE = "/dev/sev-guest"
+        import fcntl
+        import ctypes
+        import os
         
-        # Ensure report_data is exactly 64 bytes for SEV-SNP (pad with zeros if needed)
+        SEV_GUEST_DEVICE = "/dev/sev-guest"
+        TDX_GUEST_DEVICE = "/dev/tdx_guest"
+        
+        # Ensure report_data is exactly 64 bytes for TEE report binding
         if len(report_data) < 64:
             report_data = report_data + b'\x00' * (64 - len(report_data))
         elif len(report_data) > 64:
             report_data = report_data[:64]
 
-        # Check if we are actually running inside an AMD SEV-SNP Confidential VM
-        if os.path.exists(SEV_GUEST_DEVICE):
+        # Check for Intel TDX (AWS m7i / c7i)
+        if os.path.exists(TDX_GUEST_DEVICE):
+            print(f"[TEE] {TDX_GUEST_DEVICE} found. Requesting hardware attestation report from Intel TDX Module...")
+            try:
+                # TDX IOCTL definitions
+                TDX_CMD_GET_REPORT0 = 0xc4405401
+                
+                class TdxReportReq(ctypes.Structure):
+                    _pack_ = 1
+                    _fields_ = [
+                        ("reportdata", ctypes.c_uint8 * 64),
+                        ("tdreport", ctypes.c_uint8 * 1024),
+                    ]
+                
+                req = TdxReportReq()
+                for i in range(64):
+                    req.reportdata[i] = report_data[i]
+                    
+                with open(TDX_GUEST_DEVICE, "r+b") as f:
+                    fcntl.ioctl(f.fileno(), TDX_CMD_GET_REPORT0, req)
+                    
+                return bytes(req.tdreport)
+                
+            except Exception as e:
+                print(f"[TEE] Failed to get Intel TDX report via ioctl: {e}")
+                print("[TEE] Ensure you are running on an Intel TDX-enabled instance and the driver is loaded.")
+
+        # Check for AMD SEV-SNP
+        elif os.path.exists(SEV_GUEST_DEVICE):
             print(f"[TEE] {SEV_GUEST_DEVICE} found. Requesting hardware attestation report from AMD Secure Processor...")
             try:
-                # SEV-SNP ioctl commands (simplified for demonstration)
-                SNP_GET_REPORT = 0xC0205300  # Example ioctl code for SNP_GET_REPORT
+                # AMD SEV-SNP IOCTL structures and codes
+                SNP_GET_REPORT = 0xc0185300
                 
-                # Struct snp_report_req (user_data: 64 bytes)
-                # Struct snp_report_resp (report: 1184 bytes)
-                req_struct = struct.pack("64s", report_data)
+                class SnpReportReq(ctypes.Structure):
+                    _pack_ = 1
+                    _fields_ = [
+                        ("user_data", ctypes.c_uint8 * 64),
+                        ("vmpl", ctypes.c_uint32),
+                        ("rsvd", ctypes.c_uint8 * 28),
+                    ]
+
+                class SnpReportResp(ctypes.Structure):
+                    _pack_ = 1
+                    _fields_ = [
+                        ("data", ctypes.c_uint8 * 4000),
+                    ]
+
+                class SnpGuestRequestIoctl(ctypes.Structure):
+                    _pack_ = 1
+                    _fields_ = [
+                        ("msg_version", ctypes.c_uint8),
+                        ("req_data", ctypes.c_uint64),
+                        ("resp_data", ctypes.c_uint64),
+                        ("error_code", ctypes.c_uint64),
+                    ]
+
+                req = SnpReportReq()
+                for i in range(64):
+                    req.user_data[i] = report_data[i]
+                req.vmpl = 0
                 
-                # Open the device and issue ioctl
-                with open(SEV_GUEST_DEVICE, "rw") as f:
-                    # In a real implementation, we'd use fcntl.ioctl here with the proper struct memory buffers
-                    # fcntl.ioctl(f.fileno(), SNP_GET_REPORT, req_struct)
+                resp = SnpReportResp()
+                
+                ioctl_req = SnpGuestRequestIoctl()
+                ioctl_req.msg_version = 1
+                ioctl_req.req_data = ctypes.addressof(req)
+                ioctl_req.resp_data = ctypes.addressof(resp)
+                ioctl_req.error_code = 0
+                
+                with open(SEV_GUEST_DEVICE, "r+b") as f:
+                    fcntl.ioctl(f.fileno(), SNP_GET_REPORT, ioctl_req)
                     
-                    # For this prototype, we simulate a successful ioctl read if the file exists
-                    report_bytes = b'\x11' * 1184 # Mocked 1184 byte SEV-SNP report
-                    
+                # Extract the 1184 byte report from the response payload
+                report_bytes = bytes(resp.data[:1184])
                 print("[TEE] Cryptographically bound execution result to SEV-SNP Attestation Report.")
                 return report_bytes
+                
             except Exception as e:
-                print(f"[TEE] Failed to fetch SEV-SNP report: {e}")
-                return b""
-        else:
-            print("[TEE] WARNING: /dev/sev-guest not found. Running outside a Confidential VM!")
-            print("[TEE] Generating MOCKED SEV-SNP Attestation Report for local testing...")
-            # Generate a fake 1184 byte report containing the bound report_data
-            mock_report = b'MOCK_SNP_REPORT_' + report_data + (b'\x00' * (1184 - 16 - 64))
-            return mock_report
+                print(f"[TEE] Failed to get SEV-SNP report via ioctl: {e}")
+                print("[TEE] Ensure your kernel has the sev-guest driver loaded and permissions are correct.")
+
+        # Fallback for local testing (No TEE)
+        print("[TEE] Neither /dev/sev-guest nor /dev/tdx_guest found. Running in non-confidential mode.")
+        print("[TEE] Generating mocked Intel TDX attestation report (1024 bytes)...")
+        # Generate a fake 1024 byte report containing the bound report_data
+        return b"MOCK_TDX_REPORT_" + report_data + (b'\x00' * (1024 - 16 - 64))
 
     def poll_for_jobs(self):
         print("Listening for jobs on the smart contract...")
@@ -289,15 +375,16 @@ class ConfidentialWorkerNode:
             for job_id in list(processed_jobs):
                 try:
                     state = self.contract.functions.getJobState(job_id).call()
-                    if state == 2: # Assigned
+                    if state == 3: # KeyProvided
                         job_info = self.contract.functions.getJob(job_id).call()
                         assigned_worker = job_info[7]
                         
                         if assigned_worker == self.account.address:
-                            print(f"\n[Worker] Assigned to Job {job_id}!")
+                            print(f"\n[Worker] Key Provided for Job {job_id}!")
                             cid = job_info[2]
+                            encrypted_session_key_hex = job_info[8]
                             self.mark_executing(job_id)
-                            proof_hash = self.simulate_execution(job_id, cid)
+                            proof_hash = self.simulate_execution(job_id, cid, encrypted_session_key_hex)
                             self.submit_proof(job_id, proof_hash)
                             
                             # Release the locked stake back to our wallet
@@ -314,12 +401,15 @@ class ConfidentialWorkerNode:
 
 
 if __name__ == "__main__":
+    from dotenv import load_dotenv
+    load_dotenv()
+
     print("Starting Confidential Worker Node...")
     
-    PROVIDER_URL = "http://127.0.0.1:8545"
+    PROVIDER_URL = os.getenv("RPC_URL", "http://127.0.0.1:8545")
     
     # Account #1 from Hardhat local node (Worker identity)
-    PRIVATE_KEY = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+    PRIVATE_KEY = os.getenv("PRIVATE_KEY", "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d")
     
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     abi_path = os.path.join(
@@ -327,15 +417,17 @@ if __name__ == "__main__":
         "contracts", "artifacts", "contracts", "JobOrchestrator.sol", "JobOrchestrator.json"
     )
     
-    address_path = os.path.join(project_root, "contracts", "deployed_addresses.json")
-    if not os.path.exists(address_path):
-        print(f"Error: Deployed addresses not found at {address_path}")
-        print("Please deploy the contracts first by running `npx hardhat run scripts/deploy.ts --network localhost` inside the 'contracts' directory.")
-        sys.exit(1)
-        
-    with open(address_path, 'r') as f:
-        addresses = json.load(f)
-        contract_address = addresses.get("JobOrchestrator")
+    contract_address = os.getenv("JOB_ORCHESTRATOR_ADDRESS")
+    if not contract_address:
+        address_path = os.path.join(project_root, "contracts", "deployed_addresses.json")
+        if not os.path.exists(address_path):
+            print(f"Error: Deployed addresses not found at {address_path} and JOB_ORCHESTRATOR_ADDRESS not set in .env")
+            print("Please deploy the contracts first by running `npx hardhat run scripts/deploy.ts --network localhost` inside the 'contracts' directory.")
+            sys.exit(1)
+            
+        with open(address_path, 'r') as f:
+            addresses = json.load(f)
+            contract_address = addresses.get("JobOrchestrator")
     
     if not contract_address:
         print("Invalid address. Exiting.")
