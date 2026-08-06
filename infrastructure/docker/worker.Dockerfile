@@ -8,11 +8,27 @@ RUN apt-get update && apt-get install -y \
     cmake \
     git \
     libssl-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Install maturin
+RUN pip install maturin
+
+# Copy crypto module and compile
+COPY crypto/pqc /app/crypto/pqc
+WORKDIR /app/crypto/pqc
+RUN maturin develop --release
+
+WORKDIR /app
 
 # Copy requirements and install python packages
 COPY apps/worker-runtime/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install python-dotenv
 
 # Copy the worker application code
 COPY apps/worker-runtime/ /app/worker-runtime/
