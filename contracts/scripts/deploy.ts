@@ -1,12 +1,12 @@
 import { ethers } from "hardhat";
 
 async function main() {
-  console.log("Deploying MockGroth16Verifier...");
-  const MockGroth16Verifier = await ethers.getContractFactory("MockGroth16Verifier");
-  const verifier = await MockGroth16Verifier.deploy();
+  console.log("Deploying Groth16Verifier...");
+  const Groth16Verifier = await ethers.getContractFactory("Groth16Verifier");
+  const verifier = await Groth16Verifier.deploy();
   await verifier.waitForDeployment();
   const verifierAddress = await verifier.getAddress();
-  console.log(`MockGroth16Verifier deployed to: ${verifierAddress}`);
+  console.log(`Groth16Verifier deployed to: ${verifierAddress}`);
 
   console.log("Deploying ProtocolGovernance...");
   const [deployer] = await ethers.getSigners();
@@ -48,7 +48,7 @@ async function main() {
   const fs = require("fs");
   const path = require("path");
   const addresses = {
-    MockGroth16Verifier: verifierAddress,
+    Groth16Verifier: verifierAddress,
     ProtocolGovernance: govAddress,
     ClientGateway: gatewayAddress,
     JobOrchestrator: address

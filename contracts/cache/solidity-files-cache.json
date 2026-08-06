@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "C:\\Users\\DEEPESH\\Downloads\\VT  project 2\\contracts\\contracts\\JobOrchestrator.sol": {
-      "lastModificationDate": 1785906732362,
-      "contentHash": "8ceb090a678cc7348477fb61c29e13c6",
+      "lastModificationDate": 1786033765501,
+      "contentHash": "fbe12d857e35f8c52257a7e856ba2b80",
       "sourceName": "contracts/JobOrchestrator.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -30,7 +30,7 @@
         }
       },
       "imports": [
-        "./MockGroth16Verifier.sol",
+        "./Groth16Verifier.sol",
         "@openzeppelin/contracts/access/Ownable.sol"
       ],
       "versionPragmas": [
@@ -225,6 +225,43 @@
       ],
       "artifacts": [
         "ClientGateway"
+      ]
+    },
+    "C:\\Users\\DEEPESH\\Downloads\\VT  project 2\\contracts\\contracts\\Groth16Verifier.sol": {
+      "lastModificationDate": 1786033716169,
+      "contentHash": "6e368b9f1e766fc8b7fdfb4b65ff8d4f",
+      "sourceName": "contracts/Groth16Verifier.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "Groth16Verifier",
+        "IGroth16Verifier"
       ]
     }
   }

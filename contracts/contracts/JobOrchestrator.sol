@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "./MockGroth16Verifier.sol";
+import "./Groth16Verifier.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 enum JobState {
