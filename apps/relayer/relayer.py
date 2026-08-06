@@ -4,7 +4,7 @@ import time
 from web3 import Web3
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 # Connect to Node (Default to localhost, configurable via RPC_URL)
 RPC_URL = os.getenv("RPC_URL", "http://127.0.0.1:8545")

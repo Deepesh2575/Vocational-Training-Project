@@ -48,8 +48,7 @@ if __name__ == "__main__":
     from dotenv import load_dotenv
     import sys
     import os
-    
-    load_dotenv()
+    load_dotenv(override=True)
     
     print("Initializing Decentralized Compute Client for E2E Test...")
     PROVIDER_URL = os.getenv("RPC_URL", "http://127.0.0.1:8545")
