@@ -32,8 +32,7 @@ class DecentralizedComputeClient:
             'from': self.account.address,
             'nonce': nonce,
             'value': budget,
-            'gas': 2000000,
-            'gasPrice': self.w3.to_wei('50', 'gwei')
+            'gasPrice': self.w3.eth.gas_price
         })
         
         signed_tx = self.w3.eth.account.sign_transaction(tx, private_key=self.private_key)
