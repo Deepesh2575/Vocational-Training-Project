@@ -51,12 +51,7 @@ def process_funded_events(last_block):
     if current_block < last_block:
         return current_block
 
-    filter_params = {
-        'fromBlock': last_block,
-        'toBlock': current_block
-    }
-    
-    events = client_gateway.events.CrossChainJobFunded().get_logs(**filter_params)
+    events = client_gateway.events.CrossChainJobFunded.create_filter(from_block=last_block, to_block=current_block).get_all_entries()
     for event in events:
         args = event['args']
         print(f"\n[Relayer] Detected CrossChainJobFunded! JobID: {args['jobId']}, Budget: {args['budget']}")
@@ -88,12 +83,7 @@ def process_completed_events(last_block):
     if current_block < last_block:
         return current_block
 
-    filter_params = {
-        'fromBlock': last_block,
-        'toBlock': current_block
-    }
-    
-    events = orchestrator.events.CrossChainJobCompleted().get_logs(**filter_params)
+    events = orchestrator.events.CrossChainJobCompleted.create_filter(from_block=last_block, to_block=current_block).get_all_entries()
     for event in events:
         args = event['args']
         print(f"\n[Relayer] Detected CrossChainJobCompleted! JobID: {args['jobId']}, Worker: {args['worker']}")

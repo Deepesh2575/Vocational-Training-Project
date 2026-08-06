@@ -47,7 +47,7 @@ class ConfidentialWorkerNode:
         print(f"[Worker] Generating TEE Enclave Attestation Quote before bidding...")
         # Bind the worker's address into the report data to prevent replay attacks
         user_data = self.account.address.encode('utf-8')
-        enclave_quote = self.get_sev_snp_report(user_data)
+        enclave_quote = self.get_tee_attestation_report(user_data)
         
         nonce = self.w3.eth.get_transaction_count(self.account.address)
         tx = self.contract.functions.submitBid(
