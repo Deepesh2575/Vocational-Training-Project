@@ -25,7 +25,8 @@ RUN pip install maturin
 # Copy crypto module and compile
 COPY crypto/pqc /app/crypto/pqc
 WORKDIR /app/crypto/pqc
-RUN maturin develop --release
+RUN maturin build --release
+RUN pip install target/wheels/*.whl
 
 WORKDIR /app
 
