@@ -411,7 +411,10 @@ if __name__ == "__main__":
     # Account #1 from Hardhat local node (Worker identity)
     PRIVATE_KEY = os.getenv("PRIVATE_KEY", "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d")
     
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    if os.path.exists("/app/contracts"):
+        project_root = "/app"
+    else:
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     abi_path = os.path.join(
         project_root, 
         "contracts", "artifacts", "contracts", "JobOrchestrator.sol", "JobOrchestrator.json"
