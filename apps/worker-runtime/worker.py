@@ -34,7 +34,7 @@ class ConfidentialWorkerNode:
         self.cpu = 16
         self.gpuVram = 32
         self.ram = 64
-        self.stake = self.w3.to_wei(1, 'ether') # 1 ETH stake for MVP
+        self.stake = self.w3.to_wei(0.0001, 'ether') # Reduced to 0.0001 ETH for testnet faucets
         
         # Generate persistent in-memory identity (PQC Hybrid Keypair)
         print("[Worker] Generating In-Memory Identity (Kyber + X25519)...")
@@ -394,8 +394,8 @@ class ConfidentialWorkerNode:
                         else:
                             print(f"\n[Worker] Job {job_id} assigned to a different worker.")
                             processed_jobs.remove(job_id) # We lost the bid
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(f"[Worker] Exception in polling loop: {e}")
                     
             time.sleep(3)
 
