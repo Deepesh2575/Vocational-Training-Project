@@ -52,8 +52,8 @@ def process_funded_events(last_block):
         return current_block
 
     filter_params = {
-        'from_block': last_block,
-        'to_block': current_block
+        'fromBlock': last_block,
+        'toBlock': current_block
     }
     
     events = client_gateway.events.CrossChainJobFunded().get_logs(**filter_params)
@@ -89,8 +89,8 @@ def process_completed_events(last_block):
         return current_block
 
     filter_params = {
-        'from_block': last_block,
-        'to_block': current_block
+        'fromBlock': last_block,
+        'toBlock': current_block
     }
     
     events = orchestrator.events.CrossChainJobCompleted().get_logs(**filter_params)
