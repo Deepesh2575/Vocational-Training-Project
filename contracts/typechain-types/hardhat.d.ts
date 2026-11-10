@@ -45,6 +45,10 @@ declare module "hardhat/types/runtime" {
       name: "ProtocolGovernance",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ProtocolGovernance__factory>;
+    getContractFactory(
+      name: "RealGroth16Verifier",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.RealGroth16Verifier__factory>;
 
     getContractAt(
       name: "Ownable",
@@ -86,6 +90,11 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.ProtocolGovernance>;
+    getContractAt(
+      name: "RealGroth16Verifier",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.RealGroth16Verifier>;
 
     deployContract(
       name: "Ownable",
@@ -119,6 +128,10 @@ declare module "hardhat/types/runtime" {
       name: "ProtocolGovernance",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ProtocolGovernance>;
+    deployContract(
+      name: "RealGroth16Verifier",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.RealGroth16Verifier>;
 
     deployContract(
       name: "Ownable",
@@ -160,6 +173,11 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ProtocolGovernance>;
+    deployContract(
+      name: "RealGroth16Verifier",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.RealGroth16Verifier>;
 
     // default types
     getContractFactory(

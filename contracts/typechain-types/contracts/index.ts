@@ -8,3 +8,4 @@ export type { mockGroth16VerifierSol };
 export type { ClientGateway } from "./ClientGateway";
 export type { JobOrchestrator } from "./JobOrchestrator";
 export type { ProtocolGovernance } from "./ProtocolGovernance";
+export type { RealGroth16Verifier } from "./RealGroth16Verifier";

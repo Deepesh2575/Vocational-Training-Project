@@ -45,8 +45,10 @@ class ConfidentialWorkerNode:
 
     def submit_bid(self, job_id: int):
         print(f"[Worker] Generating TEE Enclave Attestation Quote before bidding...")
-        # Bind the worker's address into the report data to prevent replay attacks
-        user_data = self.account.address.encode('utf-8')
+        # Bind the worker's post-quantum identity (ML-KEM-768 PK + X25519 PK) into report_data
+        pk_bytes = self.kyber_pk + self.x25519_pk
+        user_data = hashlib.sha256(pk_bytes).digest()
+        print(f"[Worker] Bound SHA-256(ML-KEM-PK || X25519-PK) into TEE report_data: {user_data.hex()}")
         enclave_quote = self.get_tee_attestation_report(user_data)
         
         nonce = self.w3.eth.get_transaction_count(self.account.address)
@@ -116,44 +118,35 @@ class ConfidentialWorkerNode:
         
         # Verify Payload Provenance via ML-DSA
         print(f"Fetching payload from IPFS CID: {cid}")
+        manifest = None
         try:
             from storage import StorageClient
             storage_client = StorageClient()
             manifest = storage_client.download_dict(cid)
-                
-            nonce_bytes = bytes.fromhex(manifest["nonce"])
-            ct_bytes = bytes.fromhex(manifest["ciphertext"])
-            mldsa_vk = bytes.fromhex(manifest["mldsa_public_key"])
-            signature = bytes.fromhex(manifest["mldsa_signature"])
-            
-            payload = nonce_bytes + ct_bytes
-            is_valid = crypto_pqc.verify_signature(mldsa_vk, payload, signature)
-            if is_valid:
-                print(f"[Worker] ML-DSA Signature Verified Successfully! (Length: {len(signature)} bytes)")
-            else:
-                print("[Worker] WARNING: ML-DSA Signature Verification Failed!")
+            print("[Worker] Downloaded manifest from IPFS gateway successfully!")
         except Exception as e:
-            print(f"[Worker] Could not verify ML-DSA signature or fetch from IPFS: {e}")
-            if cid == "ipfs://QmDummyCidForTestingPhase2Integration":
-                print("[Worker] Using local mock IPFS payload...")
-                mock_payload_path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")), "mock_ipfs_payload.json")
+            print(f"[Worker] Could not fetch directly from IPFS gateway: {e}")
+            print("[Worker] Using local shared mock IPFS payload...")
+            mock_payload_path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")), "mock_ipfs_payload.json")
+            if os.path.exists(mock_payload_path):
                 with open(mock_payload_path, 'r') as f:
                     manifest = json.load(f)
-                
-                nonce_bytes = bytes.fromhex(manifest["nonce"])
-                ct_bytes = bytes.fromhex(manifest["ciphertext"])
-                mldsa_vk = bytes.fromhex(manifest["mldsa_public_key"])
-                signature = bytes.fromhex(manifest["mldsa_signature"])
-                
-                payload = nonce_bytes + ct_bytes
-                is_valid = crypto_pqc.verify_signature(mldsa_vk, payload, signature)
-                if is_valid:
-                    print(f"[Worker] ML-DSA Signature Verified Successfully from MOCK! (Length: {len(signature)} bytes)")
-                else:
-                    print("[Worker] WARNING: ML-DSA Signature Verification Failed from MOCK!")
-            else:
-                print("[Worker] Failed to fetch manifest.")
-                return b""
+
+        if manifest is None:
+            print("[Worker] FATAL: Failed to obtain payload manifest.")
+            return b""
+            
+        nonce_bytes = bytes.fromhex(manifest["nonce"])
+        ct_bytes = bytes.fromhex(manifest["ciphertext"])
+        mldsa_vk = bytes.fromhex(manifest["mldsa_public_key"])
+        signature = bytes.fromhex(manifest["mldsa_signature"])
+        
+        payload = nonce_bytes + ct_bytes
+        is_valid = crypto_pqc.verify_signature(mldsa_vk, payload, signature)
+        if is_valid:
+            print(f"[Worker] ML-DSA Signature Verified Successfully! (Length: {len(signature)} bytes)")
+        else:
+            print("[Worker] WARNING: ML-DSA Signature Verification Failed!")
                 
         print("Compute workload finished successfully.")
         
@@ -332,6 +325,14 @@ class ConfidentialWorkerNode:
             except Exception as e:
                 print(f"[TEE] Failed to get SEV-SNP report via ioctl: {e}")
                 print("[TEE] Ensure your kernel has the sev-guest driver loaded and permissions are correct.")
+
+        # Check for strict TEE enforcement
+        strict_tee = os.getenv("STRICT_TEE", "false").lower() in ("true", "1")
+        if strict_tee:
+            raise RuntimeError(
+                "[TEE FATAL] STRICT TEE ENFORCED: Neither /dev/sev-guest nor /dev/tdx_guest device was detected. "
+                "The worker refused to generate a simulated attestation quote and terminated execution."
+            )
 
         # Fallback for local testing (No TEE)
         print("[TEE] Neither /dev/sev-guest nor /dev/tdx_guest found. Running in non-confidential mode.")

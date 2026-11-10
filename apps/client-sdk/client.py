@@ -133,10 +133,19 @@ compute()
             "mldsa_signature": signature.hex()
         }
         
-        ipfs_uri = "ipfs://QmDummyCidForTestingPhase2Integration"
         mock_payload_path = os.path.join(project_root, "mock_ipfs_payload.json")
         with open(mock_payload_path, 'w') as f:
             json.dump(manifest, f)
+            
+        try:
+            from storage import StorageClient
+            sc = StorageClient()
+            cid = sc.upload_dict(manifest)
+            ipfs_uri = f"ipfs://{cid}"
+            print(f"[Client] Uploaded manifest to IPFS gateway! CID: {ipfs_uri}")
+        except Exception as e:
+            print(f"[Client] Local IPFS notice ({e}). Using mock IPFS CID reference.")
+            ipfs_uri = "ipfs://QmDummyCidForTestingPhase2Integration"
             
         print(f"\nFunding job cross-chain on ClientGateway...")
         budget_wei = 1500 # Just an arbitrary value to send
@@ -158,7 +167,15 @@ compute()
                 time.sleep(1)
             
             print("\nWaiting for workers to bid on the job...")
-            time.sleep(10)
+            while True:
+                try:
+                    bidder = client.orchestrator.functions.jobBidders(job_id, 0).call()
+                    if bidder and bidder != "0x0000000000000000000000000000000000000000":
+                        print(f"Worker {bidder} has placed a bid!")
+                        break
+                except Exception:
+                    pass
+                time.sleep(3)
             
             print("Assigning the job to the winning worker...")
             nonce = client.w3.eth.get_transaction_count(client.account.address)

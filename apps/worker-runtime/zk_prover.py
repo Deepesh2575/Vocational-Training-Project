@@ -11,8 +11,8 @@ def generate_groth16_proof(output_text: str):
     curve_order = 21888242871839275222246405745257275088696311157297823662689037894645226208583
     input_signal = int.from_bytes(proof_hash, byteorder='big') % curve_order
     
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-    circuits_dir = os.path.join(project_root, "apps", "worker-runtime", "circuits")
+    worker_runtime_dir = os.path.dirname(os.path.abspath(__file__))
+    circuits_dir = os.path.join(worker_runtime_dir, "circuits")
     
     wasm_path = os.path.join(circuits_dir, "multiplier_js", "multiplier.wasm")
     zkey_path = os.path.join(circuits_dir, "multiplier_final.zkey")

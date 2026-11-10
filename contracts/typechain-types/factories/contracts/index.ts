@@ -6,3 +6,4 @@ export * as mockGroth16VerifierSol from "./MockGroth16Verifier.sol";
 export { ClientGateway__factory } from "./ClientGateway__factory";
 export { JobOrchestrator__factory } from "./JobOrchestrator__factory";
 export { ProtocolGovernance__factory } from "./ProtocolGovernance__factory";
+export { RealGroth16Verifier__factory } from "./RealGroth16Verifier__factory";

@@ -20,3 +20,5 @@ export type { MockGroth16Verifier } from "./contracts/MockGroth16Verifier.sol/Mo
 export { MockGroth16Verifier__factory } from "./factories/contracts/MockGroth16Verifier.sol/MockGroth16Verifier__factory";
 export type { ProtocolGovernance } from "./contracts/ProtocolGovernance";
 export { ProtocolGovernance__factory } from "./factories/contracts/ProtocolGovernance__factory";
+export type { RealGroth16Verifier } from "./contracts/RealGroth16Verifier";
+export { RealGroth16Verifier__factory } from "./factories/contracts/RealGroth16Verifier__factory";

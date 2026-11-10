@@ -263,6 +263,44 @@
         "Groth16Verifier",
         "IGroth16Verifier"
       ]
+    },
+    "C:\\Users\\DEEPESH\\Downloads\\VT  project 2\\contracts\\contracts\\RealGroth16Verifier.sol": {
+      "lastModificationDate": 1794316729356,
+      "contentHash": "3a0ca1bde6e1bed073b127bc670b282b",
+      "sourceName": "contracts/RealGroth16Verifier.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./Groth16Verifier.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "RealGroth16Verifier"
+      ]
     }
   }
 }
