@@ -193,7 +193,7 @@ export interface JobOrchestratorInterface extends Interface {
       [BigNumberish, BigNumberish],
       [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]],
       [BigNumberish, BigNumberish],
-      [BigNumberish]
+      [BigNumberish, BigNumberish]
     ]
   ): string;
   encodeFunctionData(
@@ -586,7 +586,7 @@ export interface JobOrchestrator extends BaseContract {
       a: [BigNumberish, BigNumberish],
       b: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]],
       c: [BigNumberish, BigNumberish],
-      input: [BigNumberish]
+      input: [BigNumberish, BigNumberish]
     ],
     [void],
     "nonpayable"
@@ -760,7 +760,7 @@ export interface JobOrchestrator extends BaseContract {
       a: [BigNumberish, BigNumberish],
       b: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]],
       c: [BigNumberish, BigNumberish],
-      input: [BigNumberish]
+      input: [BigNumberish, BigNumberish]
     ],
     [void],
     "nonpayable"

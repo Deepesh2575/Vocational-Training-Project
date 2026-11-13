@@ -13,23 +13,23 @@ const _abi = [
     inputs: [
       {
         internalType: "uint256[2]",
-        name: "a",
+        name: "_pA",
         type: "uint256[2]",
       },
       {
         internalType: "uint256[2][2]",
-        name: "b",
+        name: "_pB",
         type: "uint256[2][2]",
       },
       {
         internalType: "uint256[2]",
-        name: "c",
+        name: "_pC",
         type: "uint256[2]",
       },
       {
-        internalType: "uint256[1]",
-        name: "input",
-        type: "uint256[1]",
+        internalType: "uint256[2]",
+        name: "_pubSignals",
+        type: "uint256[2]",
       },
     ],
     name: "verifyProof",

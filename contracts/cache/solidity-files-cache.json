@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "C:\\Users\\DEEPESH\\Downloads\\VT  project 2\\contracts\\contracts\\JobOrchestrator.sol": {
-      "lastModificationDate": 1786033765501,
-      "contentHash": "fbe12d857e35f8c52257a7e856ba2b80",
+      "lastModificationDate": 1794461813099,
+      "contentHash": "7ec70d3efd481c662719fa3f19a136d1",
       "sourceName": "contracts/JobOrchestrator.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -41,8 +41,8 @@
       ]
     },
     "C:\\Users\\DEEPESH\\Downloads\\VT  project 2\\contracts\\contracts\\MockGroth16Verifier.sol": {
-      "lastModificationDate": 1785178615932,
-      "contentHash": "42e045a48bda92518862ac546a0d905d",
+      "lastModificationDate": 1794461805946,
+      "contentHash": "67dd934b64ef8ccf237d2bd26d346d25",
       "sourceName": "contracts/MockGroth16Verifier.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -68,12 +68,13 @@
           }
         }
       },
-      "imports": [],
+      "imports": [
+        "./Groth16Verifier.sol"
+      ],
       "versionPragmas": [
-        "^0.8.0"
+        "^0.8.20"
       ],
       "artifacts": [
-        "IGroth16Verifier",
         "MockGroth16Verifier"
       ]
     },
@@ -228,8 +229,8 @@
       ]
     },
     "C:\\Users\\DEEPESH\\Downloads\\VT  project 2\\contracts\\contracts\\Groth16Verifier.sol": {
-      "lastModificationDate": 1786033716169,
-      "contentHash": "6e368b9f1e766fc8b7fdfb4b65ff8d4f",
+      "lastModificationDate": 1794461791565,
+      "contentHash": "f20015d824589773df175b57550ec2f2",
       "sourceName": "contracts/Groth16Verifier.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -257,49 +258,11 @@
       },
       "imports": [],
       "versionPragmas": [
-        "^0.8.20"
+        ">=0.7.0 <0.9.0"
       ],
       "artifacts": [
         "Groth16Verifier",
         "IGroth16Verifier"
-      ]
-    },
-    "C:\\Users\\DEEPESH\\Downloads\\VT  project 2\\contracts\\contracts\\RealGroth16Verifier.sol": {
-      "lastModificationDate": 1794316729356,
-      "contentHash": "3a0ca1bde6e1bed073b127bc670b282b",
-      "sourceName": "contracts/RealGroth16Verifier.sol",
-      "solcConfig": {
-        "version": "0.8.24",
-        "settings": {
-          "evmVersion": "paris",
-          "optimizer": {
-            "enabled": false,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "./Groth16Verifier.sol"
-      ],
-      "versionPragmas": [
-        "^0.8.24"
-      ],
-      "artifacts": [
-        "RealGroth16Verifier"
       ]
     }
   }

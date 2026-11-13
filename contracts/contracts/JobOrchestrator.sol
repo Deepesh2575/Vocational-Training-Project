@@ -212,7 +212,7 @@ contract JobOrchestrator is Ownable {
         uint256[2] calldata a,
         uint256[2][2] calldata b,
         uint256[2] calldata c,
-        uint256[1] calldata input
+        uint256[2] calldata input
     ) external {
         Job storage job = jobs[jobId];
         require(msg.sender == job.assignedWorker, "Only assigned worker can submit proof");
@@ -221,8 +221,8 @@ contract JobOrchestrator is Ownable {
         // ZK-SNARK Verification
         require(verifier.verifyProof(a, b, c, input), "Invalid Groth16 ZK-SNARK Proof");
         
-        // The public input represents the output hash. We store it as bytes32.
-        job.resultHash = bytes32(input[0]);
+        // input[0] is c_x (input commitment), input[1] is c_y (output hash)
+        job.resultHash = bytes32(input[1]);
         job.state = JobState.ProofSubmitted;
         
         // Reputation Scoring: Grant reward for successful proof submission

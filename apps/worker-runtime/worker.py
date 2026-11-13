@@ -231,7 +231,10 @@ class ConfidentialWorkerNode:
         Supports both AMD SEV-SNP (/dev/sev-guest) and Intel TDX (/dev/tdx_guest) (e.g. AWS m7i).
         If no device is present, generates a mocked report for testing purposes.
         """
-        import fcntl
+        try:
+            import fcntl
+        except ImportError:
+            fcntl = None
         import ctypes
         import os
         
@@ -274,6 +277,28 @@ class ConfidentialWorkerNode:
         # Check for AMD SEV-SNP
         elif os.path.exists(SEV_GUEST_DEVICE):
             print(f"[TEE] {SEV_GUEST_DEVICE} found. Requesting hardware attestation report from AMD Secure Processor...")
+            # Try official snpguest CLI first if available
+            import shutil
+            import tempfile
+            snpguest_bin = shutil.which("snpguest") or ("/usr/local/bin/snpguest" if os.path.exists("/usr/local/bin/snpguest") else None)
+            if snpguest_bin:
+                try:
+                    with tempfile.TemporaryDirectory() as tmpdir:
+                        req_path = os.path.join(tmpdir, "request.bin")
+                        rep_path = os.path.join(tmpdir, "report.bin")
+                        with open(req_path, "wb") as f:
+                            f.write(report_data)
+                        res = subprocess.run([snpguest_bin, "report", rep_path, req_path, "-v", "0"], capture_output=True, text=True)
+                        if res.returncode == 0 and os.path.exists(rep_path):
+                            with open(rep_path, "rb") as f:
+                                report_bytes = f.read()
+                            print(f"[TEE] Cryptographically bound execution result to SEV-SNP Attestation Report ({len(report_bytes)} bytes).")
+                            return report_bytes
+                        else:
+                            print(f"[TEE] snpguest report invocation failed: {res.stderr}")
+                except Exception as e:
+                    print(f"[TEE] snpguest report execution error: {e}")
+
             try:
                 # AMD SEV-SNP IOCTL structures and codes
                 SNP_GET_REPORT = 0xc0185300

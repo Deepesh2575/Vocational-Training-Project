@@ -29,7 +29,7 @@ export interface IGroth16VerifierInterface extends Interface {
       [BigNumberish, BigNumberish],
       [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]],
       [BigNumberish, BigNumberish],
-      [BigNumberish]
+      [BigNumberish, BigNumberish]
     ]
   ): string;
 
@@ -84,10 +84,10 @@ export interface IGroth16Verifier extends BaseContract {
 
   verifyProof: TypedContractMethod<
     [
-      a: [BigNumberish, BigNumberish],
-      b: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]],
-      c: [BigNumberish, BigNumberish],
-      input: [BigNumberish]
+      _pA: [BigNumberish, BigNumberish],
+      _pB: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]],
+      _pC: [BigNumberish, BigNumberish],
+      _pubSignals: [BigNumberish, BigNumberish]
     ],
     [boolean],
     "view"
@@ -101,10 +101,10 @@ export interface IGroth16Verifier extends BaseContract {
     nameOrSignature: "verifyProof"
   ): TypedContractMethod<
     [
-      a: [BigNumberish, BigNumberish],
-      b: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]],
-      c: [BigNumberish, BigNumberish],
-      input: [BigNumberish]
+      _pA: [BigNumberish, BigNumberish],
+      _pB: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]],
+      _pC: [BigNumberish, BigNumberish],
+      _pubSignals: [BigNumberish, BigNumberish]
     ],
     [boolean],
     "view"
